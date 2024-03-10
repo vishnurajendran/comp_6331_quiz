@@ -3,7 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
-using static UnityEngine.GraphicsBuffer;
+using Random = UnityEngine.Random;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class IndividualAI : MonoBehaviour
 {
@@ -52,6 +56,15 @@ public class IndividualAI : MonoBehaviour
 
     private void FixedUpdate()
     {
+        var centre = new Vector3(0, transform.position.y, 0);
+        var distFromCentre = Vector3.Distance(transform.position, centre);
+        if (distFromCentre > maxRadius)
+        {
+            var ranPos = Random.insideUnitCircle;
+            rb.position = new Vector3(ranPos.x, transform.position.y, ranPos.y);
+            Debug.Log($"{name} Teleported to {rb.position.ToString()}");
+        }
+        
         if (boostChargeTimeLeft > 0)
         {
             boostChargeTimeLeft -= Time.fixedDeltaTime;
@@ -102,22 +115,14 @@ public class IndividualAI : MonoBehaviour
         }
         
         friendAvoidance = friendAvoidance.normalized;
-        Velocity_V3 = (Velocity_V3 + 0.5f * friendAvoidance.normalized).normalized;
-
-        var centre = new Vector3(0, transform.position.y, 0);
-        var distFromCentre = Vector3.Distance(transform.position, centre);
-        var distPerc = Mathf.Clamp01(distFromCentre/maxRadius);
-        var toCentreDir = (centre - transform.position).normalized;
-        Velocity_V3 += (Velocity_V3 + (toCentreDir * (1 * distPerc))).normalized;
-        
-        speedVector = Velocity_V3 * (agresiveness + (isBoosting?2:0));
+        Velocity_V3 = (Velocity_V3 + (1 * friendAvoidance).normalized).normalized;
+         speedVector = Velocity_V3 * (agresiveness + (isBoosting?2:0));
         rb.velocity = speedVector;
     }
 
     IEnumerator BoostCoroutine()
     {
         target = null; // no more target, its to get a new one later
-        Debug.Log($"{name} Boosting");
         isBoosting = true;
         yield return new WaitForSeconds(2);
         boostChargeTimeLeft = 3;
@@ -127,12 +132,26 @@ public class IndividualAI : MonoBehaviour
     
     private void OnDrawGizmos()
     {
+        var centre = new Vector3(0, transform.position.y, 0);
+#if UNITY_EDITOR
+        var color = Color.gray;
+        color.a = 0.015f;
+        Handles.color = color;
+        Handles.DrawSolidDisc(centre, Vector3.up, maxRadius);
+        
         if (!Application.isPlaying)
+        {
+           
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(transform.position, centre);
+            Handles.Label(transform.position, $"Dist To Centre: {Vector3.Distance(transform.position, centre)}");
             return;
+        }
+            
         
         if(_sphereCollider == null)
             _sphereCollider = GetComponent<SphereCollider>();
-        var col = Color.black;
+        var col = Color.white;
         if (tag.Equals("Scissors"))
         {
             col = Color.red;
@@ -158,5 +177,6 @@ public class IndividualAI : MonoBehaviour
         {
             Gizmos.DrawLine(transform.position, closestEnemy.position);
         }
+#endif
     }
 }

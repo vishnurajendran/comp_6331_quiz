@@ -182,7 +182,7 @@ public class GroupAI : MonoBehaviour
         {
             high = Mathf.Lerp(0,1, theNumberOfUnits/friendsThresholds.Max);
         }
-        return new (0,0);
+        return new (low,high);
     }
 
     private (float Low, float High) Fuzzyification_enemy(float theNumberOfUnits)
